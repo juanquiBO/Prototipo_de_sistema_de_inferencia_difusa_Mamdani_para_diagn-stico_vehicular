@@ -1,0 +1,304 @@
+# Instalar librerías necesarias
+!pip install scikit-fuzzy
+!pip install ipywidgets
+
+import numpy as np
+import skfuzzy as fuzz
+from skfuzzy import control as ctrl
+import matplotlib.pyplot as plt
+import ipywidgets as widgets
+from IPython.display import display, clear_output
+import warnings
+warnings.filterwarnings('ignore')
+
+# Configuración de gráficos
+plt.style.use('default')
+%matplotlib inline
+
+print("🚗 SISTEMA DE DIAGNÓSTICO INTELIGENTE - TOYOTA COROLLA 2023 🚗")
+print("=" * 60)
+
+# RANGOS ESPECÍFICOS PARA TOYOTA COROLLA 2023 (1.8L 4 CILINDROS)
+# Basado en especificaciones técnicas del fabricante
+
+# Definir variables de entrada con rangos específicos
+temperatura_motor = ctrl.Antecedent(np.arange(50, 121, 1), 'temperatura_motor')
+vibracion = ctrl.Antecedent(np.arange(0, 101, 1), 'vibracion')
+consumo_combustible = ctrl.Antecedent(np.arange(5, 16, 0.1), 'consumo_combustible')
+presion_aceite = ctrl.Antecedent(np.arange(10, 81, 1), 'presion_aceite')
+temperatura_lubricante = ctrl.Antecedent(np.arange(50, 121, 1), 'temperatura_lubricante')
+presion_combustible = ctrl.Antecedent(np.arange(30, 71, 1), 'presion_combustible')
+rpm_motor = ctrl.Antecedent(np.arange(500, 6501, 1), 'rpm_motor')
+
+# Definir variable de salida
+diagnostico = ctrl.Consequent(np.arange(0, 101, 1), 'diagnostico')
+
+# FUNCIONES DE MEMBRESÍA - OPTIMIZADAS PARA COROLLA 2023
+
+# Temperatura del motor (°C) - Óptimo: 85-95°C
+temperatura_motor['baja'] = fuzz.trapmf(temperatura_motor.universe, [50, 50, 65, 75])
+temperatura_motor['normal'] = fuzz.trimf(temperatura_motor.universe, [75, 90, 105])
+temperatura_motor['alta'] = fuzz.trapmf(temperatura_motor.universe, [95, 105, 120, 120])
+
+# Nivel de vibración (0-100)
+vibracion['baja'] = fuzz.trapmf(vibracion.universe, [0, 0, 20, 40])
+vibracion['media'] = fuzz.trimf(vibracion.universe, [30, 50, 70])
+vibracion['alta'] = fuzz.trapmf(vibracion.universe, [60, 80, 100, 100])
+
+# Consumo de combustible (L/100km) - Ciudad: 7.1-9.4 L/100km
+consumo_combustible['bajo'] = fuzz.trapmf(consumo_combustible.universe, [5, 5, 6.5, 7.5])
+consumo_combustible['normal'] = fuzz.trimf(consumo_combustible.universe, [7, 8.5, 10])
+consumo_combustible['alto'] = fuzz.trapmf(consumo_combustible.universe, [9, 11, 15, 15])
+
+# Presión de aceite (psi) - Óptimo: 25-65 psi
+presion_aceite['baja'] = fuzz.trapmf(presion_aceite.universe, [10, 10, 20, 30])
+presion_aceite['normal'] = fuzz.trimf(presion_aceite.universe, [25, 45, 65])
+presion_aceite['alta'] = fuzz.trapmf(presion_aceite.universe, [60, 70, 80, 80])
+
+# Temperatura del lubricante (°C)
+temperatura_lubricante['baja'] = fuzz.trapmf(temperatura_lubricante.universe, [50, 50, 65, 75])
+temperatura_lubricante['normal'] = fuzz.trimf(temperatura_lubricante.universe, [70, 85, 100])
+temperatura_lubricante['alta'] = fuzz.trapmf(temperatura_lubricante.universe, [95, 105, 120, 120])
+
+# Presión de combustible (psi) - Óptimo: 40-55 psi
+presion_combustible['baja'] = fuzz.trapmf(presion_combustible.universe, [30, 30, 35, 45])
+presion_combustible['normal'] = fuzz.trimf(presion_combustible.universe, [40, 50, 60])
+presion_combustible['alta'] = fuzz.trapmf(presion_combustible.universe, [55, 65, 70, 70])
+
+# RPM del motor
+rpm_motor['bajas'] = fuzz.trapmf(rpm_motor.universe, [500, 500, 1000, 2000])
+rpm_motor['medias'] = fuzz.trimf(rpm_motor.universe, [1500, 3000, 4500])
+rpm_motor['altas'] = fuzz.trapmf(rpm_motor.universe, [4000, 5000, 6500, 6500])
+
+# Variable de salida - Diagnóstico
+diagnostico['optimo'] = fuzz.trapmf(diagnostico.universe, [0, 0, 20, 40])
+diagnostico['advertencia'] = fuzz.trimf(diagnostico.universe, [30, 50, 70])
+diagnostico['peligro'] = fuzz.trapmf(diagnostico.universe, [60, 80, 100, 100])
+
+# VISUALIZACIÓN DE FUNCIONES DE MEMBRESÍA
+def mostrar_funciones_membresia():
+    fig, axes = plt.subplots(2, 4, figsize=(20, 10))
+
+    variables = [
+        (temperatura_motor, 'Temperatura Motor (°C)', 0, 0),
+        (vibracion, 'Nivel Vibración', 0, 1),
+        (consumo_combustible, 'Consumo Combustible (L/100km)', 0, 2),
+        (presion_aceite, 'Presión Aceite (psi)', 0, 3),
+        (temperatura_lubricante, 'Temp. Lubricante (°C)', 1, 0),
+        (presion_combustible, 'Presión Combustible (psi)', 1, 1),
+        (rpm_motor, 'RPM Motor', 1, 2),
+        (diagnostico, 'Diagnóstico', 1, 3)
+    ]
+
+    for var, title, row, col in variables:
+        ax = axes[row, col]
+        for memb in var.terms.values():
+            ax.plot(var.universe, memb.mf, label=memb.label, linewidth=2)
+        ax.set_title(f'Función de Membresía: {title}')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.show()
+
+print("📊 Funciones de membresía del sistema:")
+mostrar_funciones_membresia()
+
+# REGLAS DIFUSAS ESPECÍFICAS PARA COROLLA
+regla1 = ctrl.Rule(temperatura_motor['normal'] & vibracion['baja'] &
+                   consumo_combustible['normal'] & presion_aceite['normal'] &
+                   temperatura_lubricante['normal'] & presion_combustible['normal'] &
+                   rpm_motor['medias'], diagnostico['optimo'])
+
+regla2 = ctrl.Rule(temperatura_motor['alta'] & presion_aceite['baja'],
+                   diagnostico['peligro'])
+
+regla3 = ctrl.Rule(vibracion['alta'] & rpm_motor['altas'],
+                   diagnostico['peligro'])
+
+regla4 = ctrl.Rule(consumo_combustible['alto'] & temperatura_motor['alta'],
+                   diagnostico['peligro'])
+
+regla5 = ctrl.Rule(temperatura_motor['alta'] | vibracion['media'] |
+                   consumo_combustible['alto'] | presion_aceite['baja'],
+                   diagnostico['advertencia'])
+
+regla6 = ctrl.Rule(presion_combustible['baja'] & consumo_combustible['alto'],
+                   diagnostico['advertencia'])
+
+regla7 = ctrl.Rule(temperatura_motor['baja'] & consumo_combustible['alto'],
+                   diagnostico['advertencia'])
+
+regla8 = ctrl.Rule(rpm_motor['altas'] & vibracion['media'],
+                   diagnostico['advertencia'])
+
+# Sistema de control
+sistema_diagnostico = ctrl.ControlSystem([regla1, regla2, regla3, regla4,
+                                         regla5, regla6, regla7, regla8])
+diagnostificador = ctrl.ControlSystemSimulation(sistema_diagnostico)
+
+# INTERFAZ GRÁFICA MEJORADA
+print("\n🎯 EJEMPLOS DE VALORES PARA PROBAR:")
+print("Caso Óptimo: Temp=88°C, Vib=25, Consumo=8.2, Aceite=45, Lubricante=85, Combustible=48, RPM=2500")
+print("Caso Advertencia: Temp=98°C, Vib=55, Consumo=11.5, Aceite=35, Lubricante=95, Combustible=42, RPM=3500")
+print("Caso Peligro: Temp=110°C, Vib=80, Consumo=13.5, Aceite=20, Lubricante=105, Combustible=35, RPM=5500")
+
+# Crear widgets para entrada de datos
+style = {'description_width': '200px'}
+layout = widgets.Layout(width='400px')
+
+temp_slider = widgets.FloatSlider(value=88, min=50, max=120, step=1,
+                                  description='🌡️ Temperatura Motor (°C):', style=style, layout=layout)
+vib_slider = widgets.FloatSlider(value=25, min=0, max=100, step=1,
+                                 description='📳 Nivel Vibración (0-100):', style=style, layout=layout)
+consumo_slider = widgets.FloatSlider(value=8.2, min=5, max=15, step=0.1,
+                                     description='⛽ Consumo Combustible (L/100km):', style=style, layout=layout)
+aceite_slider = widgets.FloatSlider(value=45, min=10, max=80, step=1,
+                                    description='🛢️ Presión Aceite (psi):', style=style, layout=layout)
+lubricante_slider = widgets.FloatSlider(value=85, min=50, max=120, step=1,
+                                        description='🌡️ Temp. Lubricante (°C):', style=style, layout=layout)
+combustible_slider = widgets.FloatSlider(value=48, min=30, max=70, step=1,
+                                         description='⛽ Presión Combustible (psi):', style=style, layout=layout)
+rpm_slider = widgets.FloatSlider(value=2500, min=500, max=6500, step=100,
+                                 description='⚙️ RPM Motor:', style=style, layout=layout)
+
+diagnosticar_btn = widgets.Button(description='🔍 REALIZAR DIAGNÓSTICO',
+                                  button_style='success', layout=widgets.Layout(width='300px', height='40px'))
+limpiar_btn = widgets.Button(description='🧹 LIMPIAR',
+                             button_style='warning', layout=widgets.Layout(width='200px', height='40px'))
+
+# Contenedor para resultados
+output = widgets.Output()
+
+def mostrar_diagnostico(_):
+    with output:
+        clear_output()
+
+        # Obtener valores
+        valores = {
+            'temp_motor': temp_slider.value,
+            'vib': vib_slider.value,
+            'consumo': consumo_slider.value,
+            'pres_aceite': aceite_slider.value,
+            'temp_lubricante': lubricante_slider.value,
+            'pres_combustible': combustible_slider.value,
+            'rpm': rpm_slider.value
+        }
+
+        # Asignar entradas al sistema
+        for key, value in valores.items():
+            diagnostificador.input[key] = value
+
+        try:
+            diagnostificador.compute()
+            resultado = diagnostificador.output['diagnostico']
+
+            # Determinar categoría
+            if resultado <= 40:
+                categoria = "✅ ÓPTIMO"
+                color = 'green'
+                explicacion = "El vehículo funciona perfectamente. Todos los sistemas están dentro de parámetros normales."
+                recomendaciones = ["Continuar con mantenimiento preventivo regular"]
+            elif resultado <= 70:
+                categoria = "⚠️  ADVERTENCIA"
+                color = 'orange'
+                explicacion = "Se detectaron anomalías que requieren atención preventiva."
+                recomendaciones = [
+                    "Revisar sistema de refrigeración",
+                    "Verificar estado de bujías y filtros",
+                    "Programar mantenimiento en los próximos 15 días"
+                ]
+            else:
+                categoria = "🚨 PELIGRO - FALLA CRÍTICA"
+                color = 'red'
+                explicacion = "¡ATENCIÓN INMEDIATA REQUERIDA! El vehículo presenta fallas graves que pueden causar daños mayores."
+                recomendaciones = [
+                    "DETENER EL VEHÍCULO INMEDIATAMENTE",
+                    "Contactar servicio técnico Toyota",
+                    "No conducir hasta la reparación"
+                ]
+
+            # Mostrar resultados
+            print("=" * 70)
+            print("📋 DIAGNÓSTICO COMPLETO - TOYOTA COROLLA 2023")
+            print("=" * 70)
+            print(f"🔢 Puntuación: {resultado:.1f}/100")
+            print(f"🎯 Estado: {categoria}")
+            print(f"📝 Explicación: {explicacion}")
+
+            print("\n📊 VALORES INGRESADOS:")
+            print(f"   • 🌡️  Temperatura motor: {valores['temp_motor']}°C (Óptimo: 85-95°C)")
+            print(f"   • 📳 Vibración: {valores['vib']}/100 (Óptimo: <40)")
+            print(f"   • ⛽ Consumo combustible: {valores['consumo']} L/100km (Normal: 7-10 L/100km)")
+            print(f"   • 🛢️  Presión aceite: {valores['pres_aceite']} psi (Óptimo: 25-65 psi)")
+            print(f"   • 🌡️  Temp. lubricante: {valores['temp_lubricante']}°C (Óptimo: 80-95°C)")
+            print(f"   • ⛽ Presión combustible: {valores['pres_combustible']} psi (Óptimo: 40-55 psi)")
+            print(f"   • ⚙️  RPM motor: {valores['rpm']} (Óptimo: 1500-3500 RPM)")
+
+            print(f"\n💡 RECOMENDACIONES:")
+            for i, rec in enumerate(recomendaciones, 1):
+                print(f"   {i}. {rec}")
+
+            # Gráfico del resultado
+            fig, ax = plt.subplots(1, 1, figsize=(10, 4))
+
+            # Graficar funciones de membresía del diagnóstico
+            for label, mf in diagnostico.terms.items():
+                ax.plot(diagnostico.universe, mf.mf, label=label, linewidth=2)
+
+            # Marcar el resultado
+            ax.axvline(x=resultado, color=color, linestyle='--', linewidth=3,
+                      label=f'Resultado: {resultado:.1f}')
+            ax.fill_betweenx([0, 1], 0, resultado, alpha=0.2, color=color)
+
+            ax.set_title('📈 RESULTADO DEL DIAGNÓSTICO', fontsize=14, fontweight='bold')
+            ax.set_xlabel('Puntuación de Diagnóstico')
+            ax.set_ylabel('Grado de Membresía')
+            ax.legend()
+            ax.grid(True, alpha=0.3)
+            ax.set_xlim(0, 100)
+
+            plt.tight_layout()
+            plt.show()
+
+        except Exception as e:
+            print(f"❌ Error en el diagnóstico: {e}")
+            print("Por favor, verifique los valores ingresados.")
+
+def limpiar_formulario(_):
+    temp_slider.value = 88
+    vib_slider.value = 25
+    consumo_slider.value = 8.2
+    aceite_slider.value = 45
+    lubricante_slider.value = 85
+    combustible_slider.value = 48
+    rpm_slider.value = 2500
+    with output:
+        clear_output()
+        print("✅ Formulario limpiado. Listo para nuevo diagnóstico.")
+
+# Asignar funciones a botones
+diagnosticar_btn.on_click(mostrar_diagnostico)
+limpiar_btn.on_click(limpiar_formulario)
+
+# Mostrar interfaz
+print("\n🎮 PANEL DE CONTROL - Ingrese los valores del vehículo:")
+display(temp_slider)
+display(vib_slider)
+display(consumo_slider)
+display(aceite_slider)
+display(lubricante_slider)
+display(combustible_slider)
+display(rpm_slider)
+
+print("\n")
+display(widgets.HBox([diagnosticar_btn, limpiar_btn]))
+display(output)
+
+print("\n" + "="*60)
+print("💡 INSTRUCCIONES DE USO:")
+print("1. Ajuste los sliders con los valores actuales del vehículo")
+print("2. Haga clic en 'REALIZAR DIAGNÓSTICO' para analizar")
+print("3. Revise el resultado y las recomendaciones")
+print("4. Use 'LIMPIAR' para resetear el formulario")
+print("="*60)
