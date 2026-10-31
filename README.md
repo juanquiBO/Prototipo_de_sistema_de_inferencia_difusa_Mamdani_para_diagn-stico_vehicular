@@ -1,0 +1,1 @@
+# Prototipo_de_sistema_de_inferencia_difusa_Mamdani_para_diagn-stico_vehicular
